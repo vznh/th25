@@ -1,0 +1,11 @@
+/Users/brandon/Documents/th25/github/target/debug/deps/libxmlparser-e30ab486e810b5ad.rmeta: /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/lib.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/error.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/stream.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/strspan.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/xmlchar.rs
+
+/Users/brandon/Documents/th25/github/target/debug/deps/libxmlparser-e30ab486e810b5ad.rlib: /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/lib.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/error.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/stream.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/strspan.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/xmlchar.rs
+
+/Users/brandon/Documents/th25/github/target/debug/deps/xmlparser-e30ab486e810b5ad.d: /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/lib.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/error.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/stream.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/strspan.rs /Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/xmlchar.rs
+
+/Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/lib.rs:
+/Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/error.rs:
+/Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/stream.rs:
+/Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/strspan.rs:
+/Users/brandon/.cargo/registry/src/index.crates.io-6f17d22bba15001f/xmlparser-0.13.6/src/xmlchar.rs:
