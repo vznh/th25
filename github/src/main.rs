@@ -9,7 +9,8 @@ use std::sync::Arc;
 
 pub async fn serve() {
     let client = Arc::new(Client::new());
-    let app = Router::new().route("/analyze_event", post(analyze_handler));
+    let app = Router::new()
+        .route("/github-wh-test", post(github_wh_test_handler));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!(
@@ -25,4 +26,14 @@ pub async fn serve() {
 #[tokio::main]
 async fn main() {
     serve().await;
+}
+
+// handlers
+
+// example that takes in POST requests
+async fn github_wh_test_handler(req: axum::http::Request<axum::body::Body>) -> impl IntoResponse {
+    println!("Request received: {:?}", req);
+    let response = "Request content";
+    println!("Request finished");
+    response
 }
