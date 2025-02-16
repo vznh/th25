@@ -1,5 +1,6 @@
 use axum::http::HeaderMap;
 use serde_json::Value;
+use std::error::Error;
 
 #[derive(Debug)]
 pub struct GitHubEvent {
@@ -11,9 +12,10 @@ pub struct GitHubEvent {
 }
 
 pub fn get_installation_id(payload: &Value) -> Option<u64> {
-    payload.get("installation")
-           .and_then(|installation| installation.get("id"))
-           .and_then(|id| id.as_u64())
+    payload
+        .get("installation")
+        .and_then(|installation| installation.get("id"))
+        .and_then(|id| id.as_u64())
 }
 
 /// Process the webhook payload and headers to extract the GitHub event details.
@@ -28,8 +30,14 @@ pub fn process_github_payload(headers: &HeaderMap, payload: &Value) -> GitHubEve
         if event == "pull_request" {
             if let Some(action) = payload.get("action").and_then(|v| v.as_str()) {
                 if action == "synchronize" {
-                    owner = payload["repository"]["owner"]["login"].as_str().unwrap_or("").to_string();
-                    repo = payload["repository"]["name"].as_str().unwrap_or("").to_string();
+                    owner = payload["repository"]["owner"]["login"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_string();
+                    repo = payload["repository"]["name"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_string();
                     pull_number = payload["pull_request"]["number"].as_u64().unwrap_or(0);
                     if let Some(id) = get_installation_id(payload) {
                         installation_id = id;
@@ -44,10 +52,19 @@ pub fn process_github_payload(headers: &HeaderMap, payload: &Value) -> GitHubEve
             }
         } else {
             // Fallback for non-pull_request events
-            owner = payload["repository"]["owner"]["login"].as_str().unwrap_or("").to_string();
+            owner = payload["repository"]["owner"]["login"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
             commit_sha = payload["after"].as_str().unwrap_or("").to_string();
-            repo = payload["repository"]["name"].as_str().unwrap_or("").to_string();
-            println!("Webhook Received - Owner: {}, Repo: {}, SHA: {}", owner, repo, commit_sha);
+            repo = payload["repository"]["name"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            println!(
+                "Webhook Received - Owner: {}, Repo: {}, SHA: {}",
+                owner, repo, commit_sha
+            );
             if let Some(id) = get_installation_id(payload) {
                 installation_id = id;
             } else {
@@ -70,4 +87,25 @@ pub fn process_github_payload(headers: &HeaderMap, payload: &Value) -> GitHubEve
         installation_id,
         commit_sha,
     }
+}
+
+/// Process the event and swap the installation ID for an installation token.
+/// This function creates a JWT and then exchanges it for an installation token.
+/// It returns the token as a String.
+pub async fn process_event_and_get_token(
+    headers: &HeaderMap,
+    payload: &Value,
+) -> Result<String, Box<dyn Error>> {
+    let event = process_github_payload(headers, payload);
+    if event.installation_id == 0 {
+        return Err("No installation ID found in payload".into());
+    }
+
+    // Create the JWT using your helper function
+    let jwt = crate::helpers::jwt::create_jwt()?;
+
+    // Exchange the JWT for an installation token using your helper function
+    let token = crate::helpers::jwt::exchange_jwt_for_installation_token(&jwt, event.installation_id).await?;
+    
+    Ok(token)
 }

@@ -59,7 +59,7 @@ pub async fn exchange_jwt_for_installation_token(
     .post(&url)
     .header("Authorization", format!("Bearer {}", jwt))
     .header("Accept", "application/vnd.github+json")
-    .header("User-Agent", "MechanicApp") // GitHub API requires a User-Agent header.
+    .header("User-Agent", "3mechanic") // GitHub API requires a User-Agent header.
     .send()
     .await?
     .error_for_status()?;
