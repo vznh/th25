@@ -26,19 +26,12 @@ pub fn create_jwt() -> Result<String, Box<dyn Error>> {
   let key_contents = fs::read_to_string(pem_path)
     .map_err(|e| format!("Failed to read PEM file from '{}': {}", pem_path, e))?;
 
-  println!("---------");
-  println!("Key content: {}", key_contents);
-  println!("---------");
 
   let now = Utc::now();
-  println!("now: {}", Utc::now());
   let iat = (now.timestamp() - 60) as usize;
-  println!("iat: {}", iat);
   let exp = (now + Duration::minutes(10)).timestamp() as usize; // JWT valid for 10 minutes
-  println!("exp: {}", exp);
 
   let claims = Claims { iat, exp, iss: app_id.to_string() };
-  println!("claims: {:?}", claims);
 
   // Create the header using RS256
   let header = Header::new(Algorithm::RS256);
@@ -51,7 +44,6 @@ pub fn create_jwt() -> Result<String, Box<dyn Error>> {
   let token =
     encode(&header, &claims, &encoding_key).map_err(|e| format!("Failed to encode JWT: {}", e))?;
 
-  println!("JWT created successfully: {}", token);
   Ok(token)
 }
 

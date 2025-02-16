@@ -4,6 +4,7 @@ use crate::services::groq::{
 use axum::http::HeaderMap;
 use serde_json::Value;
 use std::error::Error;
+use crate::helpers::octo::{init_octocrab, test_list_pull_requests};
 
 #[derive(Debug)]
 pub struct GitHubEvent {
@@ -43,7 +44,7 @@ pub async fn process_github_payload(headers: &HeaderMap, payload: &Value) -> Git
             println!("Installation ID missing in webhook payload");
           }
           println!(
-            "Received pull_request.synchronize event for PR #{} in {}/{} with commit SHA {}",
+            "Received pull_request.synchronize event for PR #{} in {}/{} with commit SHA {}.",
             pull_number, owner, repo, commit_sha
           );
         }
@@ -53,7 +54,7 @@ pub async fn process_github_payload(headers: &HeaderMap, payload: &Value) -> Git
       owner = payload["repository"]["owner"]["login"].as_str().unwrap_or("").to_string();
       commit_sha = payload["after"].as_str().unwrap_or("").to_string();
       repo = payload["repository"]["name"].as_str().unwrap_or("").to_string();
-      println!("Webhook Received - Owner: {}, Repo: {}, SHA: {}", owner, repo, commit_sha);
+      println!("Webhook received successfully!");
       if let Some(id) = get_installation_id(payload) {
         installation_id = id;
       } else {
@@ -65,7 +66,7 @@ pub async fn process_github_payload(headers: &HeaderMap, payload: &Value) -> Git
   }
 
   println!(
-    "owner: {}, repo: {}, pull_number: {}, installation_id: {}, commit_sha: {}",
+    "Values were successfully obtained. O: {}; R: {}; PR: #{}; IID: {}; SHA: {}",
     owner, repo, pull_number, installation_id, commit_sha
   );
 
@@ -98,18 +99,34 @@ pub async fn process_event_and_get_token(
   headers: &HeaderMap,
   payload: &Value,
 ) -> Result<String, Box<dyn Error>> {
-  let event = process_github_payload(headers, payload).await; // ✅ Await the async function
+  let event = process_github_payload(headers, payload).await;
 
   if event.installation_id == 0 {
-    return Err("No installation ID found in payload".into());
+      return Err("No installation ID found in payload".into());
   }
 
   // Create the JWT using your helper function
   let jwt = crate::helpers::jwt::create_jwt()?;
 
   // Exchange the JWT for an installation token using your helper function
-  let token =
-    crate::helpers::jwt::exchange_jwt_for_installation_token(&jwt, event.installation_id).await?;
+  let token = crate::helpers::jwt::exchange_jwt_for_installation_token(&jwt, event.installation_id).await?;
+
+  // Initialize Octocrab with the installation token.
+  let octo = init_octocrab(token.to_string());
+
+  // Verify authentication by fetching the current user.
+  match octo.current().user().await {
+      Ok(user) => {
+          println!("Authentication verified! Authenticated as: {:?}", user);
+      }
+      Err(err) => {
+          println!("Failed to verify authentication: {:?}", err);
+      }
+  }
+
+  // Now test the pull request function with the owner and repo from the payload.
+  test_list_pull_requests(&octo, &event.owner, &event.repo).await;
 
   Ok(token)
 }
+
