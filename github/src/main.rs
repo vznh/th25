@@ -1,18 +1,7 @@
 // main.rs
-use axum::{Router, response::IntoResponse, routing::post, Json};
+use axum::{Router, routing::post};
 use std::net::SocketAddr;
-
-// This handler remains as in your boilerplate.
-async fn github_wh_test_handler(Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
-    // println!("Received webhook: {:?}", payload);
-    // println!("End of payload");
-    let owner = payload["repository"]["owner"]["login"].as_str().unwrap_or("").to_string();
-    let commit_sha = payload["after"].as_str().unwrap_or("").to_string();
-    let repo_name = payload["repository"]["name"].as_str().unwrap_or("").to_string();
-
-    println!("Found owner: {}, SHA: {}, name: {}", owner, commit_sha, repo_name);
-    (owner, commit_sha, repo_name);
-}
+use github::handlers::webhook::github_wh_test_handler;
 
 // Build and serve the Axum app.
 pub async fn serve() {
