@@ -26,7 +26,6 @@ pub fn create_jwt() -> Result<String, Box<dyn Error>> {
   let key_contents = fs::read_to_string(pem_path)
     .map_err(|e| format!("Failed to read PEM file from '{}': {}", pem_path, e))?;
 
-
   let now = Utc::now();
   let iat = (now.timestamp() - 60) as usize;
   let exp = (now + Duration::minutes(10)).timestamp() as usize; // JWT valid for 10 minutes

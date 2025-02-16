@@ -1,10 +1,10 @@
+use crate::helpers::octo::{init_octocrab, reply_to_latest_pr};
 use crate::services::groq::{
   extract_new_functions, json_to_xml, save_xml_to_file, send_request_to_groq,
 }; // Import Groq functions
 use axum::http::HeaderMap;
 use serde_json::Value;
 use std::error::Error;
-use crate::helpers::octo::{init_octocrab, test_list_pull_requests};
 
 #[derive(Debug)]
 pub struct GitHubEvent {
@@ -102,31 +102,32 @@ pub async fn process_event_and_get_token(
   let event = process_github_payload(headers, payload).await;
 
   if event.installation_id == 0 {
-      return Err("No installation ID found in payload".into());
+    return Err("No installation ID found in payload".into());
   }
 
   // Create the JWT using your helper function
   let jwt = crate::helpers::jwt::create_jwt()?;
 
   // Exchange the JWT for an installation token using your helper function
-  let token = crate::helpers::jwt::exchange_jwt_for_installation_token(&jwt, event.installation_id).await?;
+  let token =
+    crate::helpers::jwt::exchange_jwt_for_installation_token(&jwt, event.installation_id).await?;
 
   // Initialize Octocrab with the installation token.
   let octo = init_octocrab(token.to_string());
 
   // Verify authentication by fetching the current user.
   match octo.current().user().await {
-      Ok(user) => {
-          println!("Authentication verified! Authenticated as: {:?}", user);
-      }
-      Err(err) => {
-          println!("Failed to verify authentication: {:?}", err);
-      }
+    Ok(user) => {
+      println!("Authentication verified! Authenticated as: {:?}", user);
+    }
+    Err(err) => {
+      println!("Failed to verify authentication: {:?}", err);
+    }
   }
 
   // Now test the pull request function with the owner and repo from the payload.
-  test_list_pull_requests(&octo, &event.owner, &event.repo).await;
+  // test_list_pull_requests(&octo, &event.owner, &event.repo).await;
+  // reply_to_latest_pr(&octo, &event.owner, &event.repo).await;
 
   Ok(token)
 }
-
