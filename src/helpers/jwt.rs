@@ -15,19 +15,30 @@ struct Claims {
 }
 
 pub fn create_jwt() -> Result<String, Box<dyn Error>> {
+  println!("beginning to create jwt");
   // Hardcoded GitHub App ID and PEM file path
-  let app_id = "1146309"; // Replace with your actual GitHub App ID
-  let pem_path = "certs/3mechanic.pem"; // Update to your PEM file's location
+  let app_id = 1146309; // Replace with your actual GitHub App ID
+  let pem_path = "certs/fuckyou.pem"; 
+  // print this and check if it exists
+  // Update to your PEM file's location
 
   // Attempt to read the private key file
   let key_contents = fs::read_to_string(pem_path)
     .map_err(|e| format!("Failed to read PEM file from '{}': {}", pem_path, e))?;
 
+  println!("---------");
+  println!("Key content: {}", key_contents);
+  println!("---------");
+
   let now = Utc::now();
-  let iat = now.timestamp() as usize;
+  println!("now: {}", Utc::now());
+  let iat = (now.timestamp() - 60) as usize;
+  println!("iat: {}", iat);
   let exp = (now + Duration::minutes(10)).timestamp() as usize; // JWT valid for 10 minutes
+  println!("exp: {}", exp);
 
   let claims = Claims { iat, exp, iss: app_id.to_string() };
+  println!("claims: {:?}", claims);
 
   // Create the header using RS256
   let header = Header::new(Algorithm::RS256);

@@ -1,3 +1,4 @@
+use crate::services::groq::{extract_new_functions, json_to_xml, save_xml_to_file, send_request_to_groq}; // Import Groq functions
 use axum::http::HeaderMap;
 use serde_json::Value;
 use std::error::Error;
@@ -18,7 +19,7 @@ pub fn get_installation_id(payload: &Value) -> Option<u64> {
         .and_then(|id| id.as_u64())
 }
 
-/// Process the webhook payload and headers to extract the GitHub event details.
+/// Process the webhook payload and headers to extract the GitHub event details and trigger Groq processing.
 pub fn process_github_payload(headers: &HeaderMap, payload: &Value) -> GitHubEvent {
     let mut owner = String::new();
     let mut repo = String::new();
@@ -39,19 +40,20 @@ pub fn process_github_payload(headers: &HeaderMap, payload: &Value) -> GitHubEve
                         .unwrap_or("")
                         .to_string();
                     pull_number = payload["pull_request"]["number"].as_u64().unwrap_or(0);
+                    commit_sha = payload["after"].as_str().unwrap_or("").to_string();
                     if let Some(id) = get_installation_id(payload) {
                         installation_id = id;
                     } else {
                         println!("Installation ID missing in webhook payload");
                     }
                     println!(
-                        "Received pull_request.synchronize event for PR #{} in {}/{}",
-                        pull_number, owner, repo
+                        "Received pull_request.synchronize event for PR #{} in {}/{} with commit SHA {}",
+                        pull_number, owner, repo, commit_sha
                     );
                 }
             }
         } else {
-            // Fallback for non-pull_request events
+            // Handle other events (e.g., push event)
             owner = payload["repository"]["owner"]["login"]
                 .as_str()
                 .unwrap_or("")
