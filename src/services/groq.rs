@@ -2,7 +2,7 @@
 use base64;
 use reqwest::blocking::Client;
 use serde_json::{Value, json};
-use std::{fs::File, io::Write, str, env::var};
+use std::{env, fs::File, io::Write, str};
 
 // Fetch the changed files from a commit (GitHub API)
 pub fn get_changed_files(owner: &str, repo: &str, commit_sha: &str) -> Vec<String> {
@@ -133,7 +133,7 @@ pub fn extract_new_functions(owner: &str, repo: &str, commit_sha: &str) {
     .post("https://api.groq.com/openai/v1/chat/completions")
     .header(
       "Authorization",
-      format!("Bearer {}", var("GROQ_API_KEY")),
+      format!("Bearer {}", env::var("GROQ_API_KEY").unwrap_or_else(|_| "default_key".to_string())),
     )
     .json(&json!({
         "model": "deepseek-r1-distill-llama-70b",
