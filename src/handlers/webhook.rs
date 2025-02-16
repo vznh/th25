@@ -9,12 +9,12 @@ pub async fn github_wh_test_handler(
 ) -> impl IntoResponse {
   match process_event_and_get_token(&headers, &payload).await {
     Ok(token) => {
-        println!("Successfully obtained installation token: {}", token);
-        token // Return the token as the response
+      println!("Successfully obtained installation token: {}", token);
+      token // Return the token as the response
     }
     Err(e) => {
-        println!("Error processing event: {}", e);
-        format!("Error: {}", e)
+      println!("Error processing event: {}", e);
+      format!("Error: {}", e)
     }
-}
+  }
 }

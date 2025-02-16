@@ -18,7 +18,7 @@ pub fn create_jwt() -> Result<String, Box<dyn Error>> {
   println!("beginning to create jwt");
   // Hardcoded GitHub App ID and PEM file path
   let app_id = 1146309; // Replace with your actual GitHub App ID
-  let pem_path = "certs/fuckyou.pem"; 
+  let pem_path = "certs/fuckyou.pem";
   // print this and check if it exists
   // Update to your PEM file's location
 
