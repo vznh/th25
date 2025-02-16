@@ -1,22 +1,29 @@
 // main.rs
-use axum::{Router, response::IntoResponse, routing::post};
-use reqwest::Client;
-// use serde_json::Value;
-// use serde_json::json;
+use axum::{Router, response::IntoResponse, routing::post, Json};
 use std::net::SocketAddr;
-use std::sync::Arc;
 
+// This handler remains as in your boilerplate.
+async fn github_wh_test_handler(Json(payload): Json<serde_json::Value>) -> impl IntoResponse {
+    // println!("Received webhook: {:?}", payload);
+    // println!("End of payload");
+    let owner = payload["repository"]["owner"]["login"].as_str().unwrap_or("").to_string();
+    let commit_sha = payload["after"].as_str().unwrap_or("").to_string();
+    let repo_name = payload["repository"]["name"].as_str().unwrap_or("").to_string();
 
+    println!("Found owner: {}, SHA: {}, name: {}", owner, commit_sha, repo_name);
+    (owner, commit_sha, repo_name);
+}
+
+// Build and serve the Axum app.
 pub async fn serve() {
-    // let client = Arc::new(Client::new());
     let app = Router::new()
+        // New route to trigger our GitHub event sending.
+        // .route("/send-event", post(send_github_event_handler))
+        // Your original webhook test route.
         .route("/github-wh-test", post(github_wh_test_handler));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!(
-        "Successfully listening on {}. You can now make requests.",
-        addr
-    );
+    println!("Successfully listening on {}. You can now make requests.", addr);
     axum_server::bind(addr)
         .serve(app.into_make_service())
         .await
@@ -26,14 +33,4 @@ pub async fn serve() {
 #[tokio::main]
 async fn main() {
     serve().await;
-}
-
-// handlers
-
-// example that takes in POST requests
-async fn github_wh_test_handler(req: axum::http::Request<axum::body::Body>) -> impl IntoResponse {
-    println!("Request received: {:?}", req);
-    let response = "Request content";
-    println!("Request finished");
-    response
 }
