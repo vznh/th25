@@ -1,4 +1,4 @@
-use crate::helpers::octo::{init_octocrab, reply_to_latest_pr};
+use crate::helpers::octo::{init_octocrab, reply_to_latest_pr, post_markdown_as_comment};
 use crate::services::groq::{
   extract_new_functions, json_to_xml, save_xml_to_file, send_request_to_groq,
 }; // Import Groq functions
@@ -70,25 +70,6 @@ pub async fn process_github_payload(headers: &HeaderMap, payload: &Value) -> Git
     owner, repo, pull_number, installation_id, commit_sha
   );
 
-  // ✅ **Run the Groq Pipeline for This Commit**
-  if !commit_sha.is_empty() {
-    println!("Extracting new functions from commit: {}", commit_sha);
-
-    extract_new_functions(&owner, &repo, &commit_sha).await; // ✅ Await the function
-    let xml_output = json_to_xml().await; // ✅ Convert JSON to XML (Async)
-    save_xml_to_file(&xml_output); // ✅ Save XML file (Async)
-
-    println!("Sending extracted functions to Groq AI...");
-    let groq_response = send_request_to_groq().await; // ✅ Analyze with Groq AI (Async)
-
-    match groq_response {
-      Ok(response) => println!("Groq AI Analysis Result:\n{}", response),
-      Err(e) => eprintln!("❌ Groq AI Request Failed: {:?}", e),
-    }
-  } else {
-    println!("⚠️ No commit SHA found, skipping Groq processing.");
-  }
-
   GitHubEvent { owner, repo, pull_number, installation_id, commit_sha }
 }
 
@@ -115,6 +96,32 @@ pub async fn process_event_and_get_token(
   // Initialize Octocrab with the installation token.
   let octo = init_octocrab(token.to_string());
 
+  // ✅ **Run the Groq Pipeline for This Commit**
+  if !event.commit_sha.is_empty() {
+    println!("Extracting new functions from commit: {}", event.commit_sha);
+
+    let _ = extract_new_functions(&event.owner, &event.repo, &event.commit_sha, &octo).await;
+    let xml_output = json_to_xml().await;
+    save_xml_to_file(&xml_output);
+
+    println!("Sending extracted functions to Groq AI...");
+    let groq_response = send_request_to_groq().await;
+
+    match groq_response {
+        Ok(response) => {
+            println!("Groq AI Analysis Result:\n{}", response);
+            // Here, assume your response is a markdown payload.
+            if let Err(e) = post_markdown_as_comment(&octo, &event.owner, &event.repo, event.pull_number, &response).await {
+                eprintln!("Failed to post markdown comment: {:?}", e);
+            }
+        }
+        Err(e) => eprintln!("❌ Groq AI Request Failed: {:?}", e),
+    }
+} else {
+    println!("⚠️ No commit SHA found, skipping Groq processing.");
+}
+
+
   // Verify authentication by fetching the current user.
   match octo.current().user().await {
     Ok(user) => {
@@ -125,7 +132,7 @@ pub async fn process_event_and_get_token(
     }
   }
 
-  // Now test the pull request function with the owner and repo from the payload.
+  // Now automate replying to the latest PR commit with any comment. If it's a change, then reply with a message. Else, reply with mechanic has no comment.
   // test_list_pull_requests(&octo, &event.owner, &event.repo).await;
   // reply_to_latest_pr(&octo, &event.owner, &event.repo).await;
 

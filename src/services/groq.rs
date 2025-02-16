@@ -1,6 +1,9 @@
+use crate::helpers::octo::reply_to_latest_pr;
 use base64::Engine as _; // Import Engine trait
+use octocrab::Octocrab;
 use reqwest::Client;
 use serde_json::{Value, json};
+use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::{self, Read, Write};
@@ -8,7 +11,7 @@ use std::str;
 
 /// Groq API Configuration
 const GROQ_ENDPOINT: &str = "https://api.groq.com/openai/v1/chat/completions";
-const API_KEY: &str = "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"; // Replace with your actual API key
+const API_KEY: &str = "VOID";
 
 /// **Fetch changed files from a commit (Async)**
 pub async fn get_changed_files(owner: &str, repo: &str, commit_sha: &str) -> Vec<String> {
@@ -74,15 +77,22 @@ pub async fn get_file_contents(owner: &str, repo: &str, commit_sha: &str) -> Vec
 }
 
 /// **Extract functions from code and save as JSON (Async)**
-pub async fn extract_new_functions(owner: &str, repo: &str, commit_sha: &str) {
-  let client = Client::new();
+pub async fn extract_new_functions(
+  owner: &str,
+  repo: &str,
+  commit_sha: &str,
+  octo: &Octocrab,
+) -> Result<(), Box<dyn std::error::Error>> {
   let files_with_contents = get_file_contents(owner, repo, commit_sha).await;
 
   if files_with_contents.is_empty() {
     println!("No new changes. Exiting.");
-    return;
+    // If no changes, comment on the latest PR with "mechanic says it looks good"
+    reply_to_latest_pr(octo, owner, repo).await;
+    return Ok(());
   }
 
+  // Otherwise, continue with processing...
   let file_summaries: Vec<String> = files_with_contents
     .iter()
     .map(|(file, content)| format!("📄 File: {}\n```\n{}\n```", file, content))
@@ -90,45 +100,46 @@ pub async fn extract_new_functions(owner: &str, repo: &str, commit_sha: &str) {
 
   let prompt = format!(
     "You are analyzing a commit in a software repository. Your goal is to:
-    1. **Extract high-impact functions.**
-    2. Identify function dependencies.
+      1. **Extract high-impact functions.**
+      2. Identify function dependencies.
 
-    **Return JSON only:**
-    {{
-        \"functions\": [
-            {{
-                \"name\": \"function_name\",
-                \"file\": \"file_path\",
-                \"commit_id\": \"{}\",
-                \"body\": \"function_code\",
-                \"description\": \"Function description\",
-                \"dependencies\": [\"dependency1\", \"dependency2\"]
-            }}
-        ]
-    }}
+      **Return JSON only:**
+      {{
+          \"functions\": [
+              {{
+                  \"name\": \"function_name\",
+                  \"file\": \"file_path\",
+                  \"commit_id\": \"{}\",
+                  \"body\": \"function_code\",
+                  \"description\": \"Function description\",
+                  \"dependencies\": [\"dependency1\", \"dependency2\"]
+              }}
+          ]
+      }}
 
-    Changed files:\n\n{}",
+      Changed files:\n\n{}",
     commit_sha,
     file_summaries.join("\n\n")
   );
 
+  let client = reqwest::Client::new();
   let response = client
     .post(GROQ_ENDPOINT)
     .header("Authorization", format!("Bearer {}", API_KEY))
-    .json(&json!({
+    .json(&serde_json::json!({
         "model": "deepseek-r1-distill-llama-70b",
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": 8000,
         "reasoning_format": "hidden"
     }))
     .send()
-    .await;
+    .await?;
 
-  let response_json: serde_json::Value =
-    response.expect("Failed to send request").json().await.expect("Failed to parse response");
-
+  let response_json: serde_json::Value = response.json().await?;
   println!("\n🧠 Groq AI Response:\n{:#?}\n", response_json);
   save_to_file("functions.json", &response_json);
+
+  Ok(())
 }
 
 /// **Convert JSON to XML (Async)**
@@ -144,7 +155,7 @@ pub async fn json_to_xml() -> String {
 
   let prompt = format!(
     "Convert JSON to XML:
-        
+
         **Format Rules:**
         - Root element: `<functions>`.
         - Each function inside `<function>` tag.
@@ -203,10 +214,61 @@ pub async fn send_request_to_groq() -> Result<String, reqwest::Error> {
   };
 
   let prompt = format!(
-    "Using the XML provided:\n{}\n\
-        Generate a JSON-formatted GitHub comment for code review.",
-    xml_content
-  );
+          "Using the following XML content:\n{}\n\
+          **YOU ARE GENERATING A Github commment style markdown for code review**
+
+          Otherwise:
+
+          **Only generate a GitHub-style Markdown-formatted comment for code review. No need for other comments.** The Markdown should include the following sections:\n\
+          ## :warning: Code Review: {{TITLE}}\n\
+          - `file_path`: The path to the file in the repository.\n\
+          - `sha`: The commit ID of the last update to the file.\n\
+          - `description`: A brief description of the function's purpose.\n\
+          - `body`: The original function body (source code) as it appeared before any changes. Store the body as a list of strings to take into account indentation.\n\
+          - `suggestions`: High-level suggestions made by the bot for improving the function.\n\
+          - `content`: The refactored function after applying the suggestions (recoded function with changes). Store the body as a list of strings to take into account indentation.\n\
+          - `dependencies`: A list of functions that this function depends on.\n\
+          \n\
+          ## Issue Summary\n\
+          {{USER}} has encountered an issue with {{DESCRIPTION}}.\n\
+          Please wait **{{WAIT_TIME}}** before proceeding.\n\
+          \n\
+          ### How to resolve this issue?\n\
+          - {{ACTION_POINT_1}}\n\
+          - {{ACTION_POINT_2}}\n\
+          - {{ACTION_POINT_3}}\n\
+          \n\
+          ### Why did this happen?\n\
+          - {{REASON_1}}\n\
+          - {{REASON_2}}\n\
+          \n\
+          <details>\n\
+          <summary>Additional Details</summary>\n\
+          1. **Step One**: {{DETAIL_1}}\n\
+          2. **Step Two**: {{DETAIL_2}}\n\
+          3. **Step Three**: {{DETAIL_3}}\n\
+          </details>\n\
+          \n\
+          ## Suggested Changes\n\
+          ```json\n\
+          {{\n\
+              \"file_path\": \"<file_path>\",\n\
+              \"sha\": \"<sha>\",\n\
+              \"description\": \"<description>\",\n\
+              \"body\": <body>,\n\
+              \"suggestions\": \"<suggestions>\",\n\
+              \"content\": <recoded_function>,\n\
+              \"dependencies\": [<dependencies>]\n\
+          }}\n\
+          ```\n\
+          ---\n
+
+          If there is no code detected to comment on, like a readme file edit, you can say mechanic has no code to comment on, good job.
+
+          Thank you for using **Mechanic**!
+          If you found this helpful, would you consider giving us a shout-out on your favorite social media platform?",
+          xml_content
+      );
 
   let client = Client::new();
 
